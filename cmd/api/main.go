@@ -1,32 +1,50 @@
 package main
 
 import ( 
-	"fmt"
 	"linked-list-api/src/linked_list"
+	"net/http"
+	"github.com/gin-gonic/gin"
 )
 
-var students = []linked_list.Student {
-	{ID: "1", FirstName: "Mateus", LastName: "Silva", Age: 17},
-	{ID: "2", FirstName: "Jorge", LastName: "Vieira", Age: 82},
-	{ID: "3", FirstName: "Cecilia", LastName: "Assis", Age: 213},
-	{ID: "4", FirstName: "João", LastName: "Carlos", Age: 21},
-	{ID: "5", FirstName: "Mario", LastName: "Santa", Age: 13},
-	{ID: "6", FirstName: "Roberto", LastName: "Castro", Age: 23},
+var headPointer = linked_list.Init()
+
+func getStudents(c *gin.Context) {
+	c.IndentedJSON(http.StatusOK, linked_list.ToArray(headPointer))
+}
+
+func reverseLinkedList(c *gin.Context) {
+	headPointer = linked_list.Reverse(headPointer)
+	c.IndentedJSON(http.StatusOK, linked_list.ToArray(headPointer))
+}
+
+func getStudentById(c *gin.Context){
+	student := linked_list.FindByID(headPointer, c.Param("id"))
+	
+	if student == nil {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "Student not found"})
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, student)
+}
+
+func createStudent(c *gin.Context){
+	var newStudent linked_list.Student
+	err := c.BindJSON(&newStudent)
+
+	if err != nil {
+		return
+	}
+	
+	linked_list.Append(headPointer, newStudent)
+	c.IndentedJSON(http.StatusCreated, newStudent)
 }
 
 func main() {
-	head := linked_list.Node{}
-	head.Student = students[0]
-
-	fmt.Println("Appending nodes")
-
-	for _, v := range students[1:] {
-		linked_list.Append(&head, v)
-		fmt.Println("Student's node:", v, "appended")
-	}
-
-	fmt.Println()
-	fmt.Println("Printing linked list")
-	
-	linked_list.Print(&head)
+	router := gin.Default()
+	router.GET("/students", getStudents)
+	router.GET("/students/reverse", reverseLinkedList)
+	router.GET("/students/:id", getStudentById)
+	router.POST("/students", createStudent)
+	router.Run("localhost:8080")
 }
